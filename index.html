@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Telegram Statistics</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        canvas {
+            margin-bottom: 20px;  /* Adjust as needed */
+        }
+        hr {
+            border: 1px solid black;
+            margin: 20px 0;  /* Adjust as needed */
+        }
+    </style>
+</head>
+<body>
+    <canvas id="dailyActivity"></canvas>
+    <hr/>
+    <canvas id="userActivity"></canvas>
+    <hr/>
+    <canvas id="activeHours"></canvas>
+    <hr/>
+    <canvas id="activeDays"></canvas>
+
+    <script>
+    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+    fetch('stats_2023-7-8_19-17-44.json')
+        .then(response => response.json())
+        .then(stats => {
+            createLineChart('dailyActivity', stats.dailyActivity, 'Messages per Day', 'Day');
+            createBarChart('userActivity', stats.userActivity, 'Top 20 Users by Messages');
+            createLineChart('activeHours', stats.activeHours, 'Active Hours (UTC)', 'Hour');
+            createLineChart('activeDays', convertDays(stats.activeDays), 'Active Days', 'Day');
+        });
+
+    function createLineChart(canvasId, data, label, xLabel) {
+        let ctx = document.getElementById(canvasId).getContext('2d');
+        let labels = Object.keys(data);
+        let dataValues = Object.values(data);
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: label,
+                    data: dataValues,
+                    fill: false,
+                    borderColor: 'rgb(75, 192, 192)',
+                    tension: 0.1
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: label,
+                        font: {
+                            size: 20  // Adjust as needed
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            title: function(context) {
+                                return context[0].label;
+                            },
+                            label: function(context) {
+                                return context.dataset.label + ': ' + context.parsed.y;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: xLabel
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'Messages'
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    function createBarChart(canvasId, data, label) {
+        let ctx = document.getElementById(canvasId).getContext('2d');
+        let labels = Object.keys(data);
+        let dataValues = Object.values(data);
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: label,
+                    data: dataValues,
+                    fill: false,
+                    backgroundColor: 'rgb(75, 192, 192)'
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: label,
+                        font: {
+                            size: 20  // Adjust as needed
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            title: function(context) {
+                                return context[0].label;
+                            },
+                            label: function(context) {
+                                return context.dataset.label + ': ' + context.parsed.y;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'User'
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'Messages'
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    function convertDays(data) {
+        let convertedData = {};
+        for (let key in data) {
+            convertedData[dayNames[key]] = data[key];
+        }
+        return convertedData;
+    }
+    </script>
+</body>
+</html>

@@ -117,6 +117,14 @@ function calculateBasicStats(messages, dailyActivity) {
 }
 
 /**
+ * Validates if a date string produces a valid Date object
+ */
+function isValidDate(dateString) {
+    const date = new Date(dateString);
+    return !isNaN(date.getTime());
+}
+
+/**
  * MODULE: Daily Activity
  * Calculates: message count per calendar day
  */
@@ -124,6 +132,7 @@ function calculateDailyActivity(messages) {
     const dailyActivity = {};
 
     messages.forEach(message => {
+        if (!message.date || !isValidDate(message.date)) return;
         const date = new Date(message.date);
         const day = formatDate(date);
         incrementCounter(dailyActivity, day);
@@ -140,6 +149,7 @@ function calculateMonthlyActivity(messages) {
     const monthlyActivity = {};
 
     messages.forEach(message => {
+        if (!message.date || !isValidDate(message.date)) return;
         const date = new Date(message.date);
         const month = formatMonth(date);
         incrementCounter(monthlyActivity, month);
@@ -189,6 +199,7 @@ function calculateActiveHours(messages) {
     const activeHours = {};
 
     messages.forEach(message => {
+        if (!message.date || !isValidDate(message.date)) return;
         const date = new Date(message.date);
         const hour = date.getUTCHours();
         incrementCounter(activeHours, hour);
@@ -205,6 +216,7 @@ function calculateActiveDays(messages) {
     const activeDays = {};
 
     messages.forEach(message => {
+        if (!message.date || !isValidDate(message.date)) return;
         const date = new Date(message.date);
         const weekDay = date.getUTCDay();
         incrementCounter(activeDays, weekDay);
@@ -223,9 +235,9 @@ function calculatePeaks(dailyActivity, activeHours, monthlyActivity) {
     const peakMonth = findPeak(monthlyActivity);
 
     return {
-        peakDay: { date: peakDay.key, messages: peakDay.value },
-        peakHour: { hour: parseInt(peakHour.key), messages: peakHour.value },
-        peakMonth: { month: peakMonth.key, messages: peakMonth.value }
+        peakDay: { date: peakDay.key || 'N/A', messages: peakDay.value },
+        peakHour: { hour: peakHour.key !== null ? parseInt(peakHour.key) : null, messages: peakHour.value },
+        peakMonth: { month: peakMonth.key || 'N/A', messages: peakMonth.value }
     };
 }
 
@@ -236,10 +248,11 @@ function calculatePeaks(dailyActivity, activeHours, monthlyActivity) {
 function calculateActivityStreaks(dailyActivity) {
     const dates = Object.keys(dailyActivity)
         .map(d => new Date(d))
+        .filter(d => !isNaN(d.getTime()))
         .sort((a, b) => a - b);
 
     if (dates.length === 0) {
-        return { longestStreak: 0, streakStart: null, streakEnd: null };
+        return { longestStreak: 0, streakStart: 'N/A', streakEnd: 'N/A' };
     }
 
     let longestStreak = 1;
@@ -251,7 +264,8 @@ function calculateActivityStreaks(dailyActivity) {
     for (let i = 1; i < dates.length; i++) {
         const diffDays = (dates[i] - dates[i - 1]) / (1000 * 60 * 60 * 24);
 
-        if (diffDays === 1) {
+        // Use Math.round to handle DST variations (23 or 25 hour days)
+        if (Math.round(diffDays) === 1) {
             currentStreak++;
             if (currentStreak > longestStreak) {
                 longestStreak = currentStreak;
@@ -280,6 +294,7 @@ function calculateUserTimeline(messages, topLimit = TOP_USERS_LIMIT) {
 
     messages.forEach(message => {
         if (!message.from) return;
+        if (!message.date || !isValidDate(message.date)) return;
 
         const date = new Date(message.date);
         const user = message.from;
@@ -300,11 +315,12 @@ function calculateUserTimeline(messages, topLimit = TOP_USERS_LIMIT) {
 
     const topUserTimeline = {};
     sortedUsers.forEach(([user, data]) => {
+        const daySpan = (data.lastSeen - data.firstSeen) / (1000 * 60 * 60 * 24);
         topUserTimeline[user] = {
             firstSeen: formatDate(data.firstSeen),
             lastSeen: formatDate(data.lastSeen),
             messageCount: data.messageCount,
-            activeDays: Math.ceil((data.lastSeen - data.firstSeen) / (1000 * 60 * 60 * 24)) + 1
+            activeDays: Math.max(1, Math.ceil(daySpan) + 1)
         };
     });
 
@@ -394,7 +410,7 @@ function calculateMessageLengthStats(messages) {
         else lengthDistribution['very_long (500+)']++;
     });
 
-    const sortedLengths = lengths.sort((a, b) => a - b);
+    const sortedLengths = [...lengths].sort((a, b) => a - b);
     const sum = lengths.reduce((a, b) => a + b, 0);
     const avg = lengths.length > 0 ? Math.round(sum / lengths.length * 100) / 100 : 0;
     const median = lengths.length > 0 ? sortedLengths[Math.floor(lengths.length / 2)] : 0;

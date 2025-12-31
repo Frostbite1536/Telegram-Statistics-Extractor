@@ -288,9 +288,21 @@
 
     /**
      * Formats large numbers with commas
+     * Handles null/undefined values gracefully
      */
     function formatNumber(num) {
+        if (num === null || num === undefined || isNaN(num)) return '0';
         return num.toLocaleString();
+    }
+
+    /**
+     * Escapes HTML special characters to prevent XSS
+     */
+    function escapeHtml(text) {
+        if (text === null || text === undefined) return '';
+        const div = document.createElement('div');
+        div.textContent = String(text);
+        return div.innerHTML;
     }
 
     /**
@@ -470,12 +482,13 @@
         // Render peaks highlight
         const peaks = stats.peaks;
         const peaksBox = document.getElementById('peaksHighlight');
+        const peakHourDisplay = peaks.peakHour.hour !== null ? `${peaks.peakHour.hour}:00 UTC` : 'N/A';
         peaksBox.innerHTML = `
             <h3>Peak Activity</h3>
-            <p><strong>Busiest Day:</strong> ${peaks.peakDay.date} with ${formatNumber(peaks.peakDay.messages)} messages</p>
-            <p><strong>Peak Hour:</strong> ${peaks.peakHour.hour}:00 UTC with ${formatNumber(peaks.peakHour.messages)} messages</p>
-            <p><strong>Peak Month:</strong> ${peaks.peakMonth.month} with ${formatNumber(peaks.peakMonth.messages)} messages</p>
-            <p><strong>Activity Streak:</strong> ${stats.streaks.longestStreak} consecutive days (${stats.streaks.streakStart} to ${stats.streaks.streakEnd})</p>
+            <p><strong>Busiest Day:</strong> ${escapeHtml(peaks.peakDay.date)} with ${formatNumber(peaks.peakDay.messages)} messages</p>
+            <p><strong>Peak Hour:</strong> ${peakHourDisplay} with ${formatNumber(peaks.peakHour.messages)} messages</p>
+            <p><strong>Peak Month:</strong> ${escapeHtml(peaks.peakMonth.month)} with ${formatNumber(peaks.peakMonth.messages)} messages</p>
+            <p><strong>Activity Streak:</strong> ${stats.streaks.longestStreak} consecutive days (${escapeHtml(stats.streaks.streakStart)} to ${escapeHtml(stats.streaks.streakEnd)})</p>
         `;
     }
 
@@ -502,11 +515,11 @@
             const tl = timeline[user] || {};
             html += `
                 <tr>
-                    <td>${user}</td>
+                    <td>${escapeHtml(user)}</td>
                     <td>${formatNumber(data.count)}</td>
                     <td>${data.percentage}%</td>
-                    <td>${tl.firstSeen || '-'}</td>
-                    <td>${tl.lastSeen || '-'}</td>
+                    <td>${escapeHtml(tl.firstSeen) || '-'}</td>
+                    <td>${escapeHtml(tl.lastSeen) || '-'}</td>
                     <td>${tl.activeDays || '-'}</td>
                 </tr>
             `;
@@ -533,7 +546,7 @@
         Object.entries(emoji.topEmojis).forEach(([emojiChar, count]) => {
             emojiHtml += `
                 <div class="emoji-item">
-                    <span class="emoji">${emojiChar}</span>
+                    <span class="emoji">${escapeHtml(emojiChar)}</span>
                     <span class="count">${formatNumber(count)}</span>
                 </div>
             `;
@@ -554,14 +567,16 @@
             <h4>Top Repliers:</h4>
             <ul>
                 ${Object.entries(reply.topRepliers).map(([user, count]) =>
-                    `<li>${user}: ${formatNumber(count)} replies</li>`
+                    `<li>${escapeHtml(user)}: ${formatNumber(count)} replies</li>`
                 ).join('')}
             </ul>
         `;
 
         // Create reply stats chart
+        // Note: Some messages can be both replies AND forwards, so we use Math.max to avoid negative values
+        const originalMessages = Math.max(0, stats.summary.totalMessages - reply.totalReplies - reply.totalForwards);
         const replyData = {
-            'Original Messages': stats.summary.totalMessages - reply.totalReplies - reply.totalForwards,
+            'Original Messages': originalMessages,
             'Replies': reply.totalReplies,
             'Forwards': reply.totalForwards
         };

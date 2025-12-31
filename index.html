@@ -4,49 +4,329 @@
     <title>Telegram Statistics</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        canvas {
-            margin-bottom: 20px;  /* Adjust as needed */
+        * {
+            box-sizing: border-box;
         }
-        hr {
-            border: 1px solid black;
-            margin: 20px 0;  /* Adjust as needed */
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+        }
+
+        h2 {
+            color: #444;
+            border-bottom: 2px solid #0088cc;
+            padding-bottom: 10px;
+            margin-top: 40px;
+        }
+
+        /* Summary Cards */
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .summary-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .summary-card .value {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #0088cc;
+        }
+
+        .summary-card .label {
+            color: #666;
+            margin-top: 5px;
+        }
+
+        /* Chart Containers */
+        .chart-container {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .chart-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 20px;
+        }
+
+        canvas {
+            max-height: 400px;
+        }
+
+        /* Stats Tables */
+        .stats-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        .stats-table th,
+        .stats-table td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+
+        .stats-table th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+        }
+
+        .stats-table tr:hover {
+            background-color: #f5f5f5;
+        }
+
+        /* Highlight Box */
+        .highlight-box {
+            background: linear-gradient(135deg, #0088cc, #00aaff);
+            color: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .highlight-box h3 {
+            margin-top: 0;
+        }
+
+        /* Emoji Display */
+        .emoji-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .emoji-item {
+            background: #f0f0f0;
+            padding: 10px 15px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .emoji-item .emoji {
+            font-size: 1.5em;
+        }
+
+        .emoji-item .count {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        /* Section styling */
+        .section {
+            margin-bottom: 50px;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        /* Loading state */
+        #loading {
+            text-align: center;
+            padding: 50px;
+            font-size: 1.2em;
+            color: #666;
+        }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            .chart-row {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
 <body>
-    <canvas id="dailyActivity"></canvas>
-    <hr/>
-    <canvas id="userActivity"></canvas>
-    <hr/>
-    <canvas id="activeHours"></canvas>
-    <hr/>
-    <canvas id="activeDays"></canvas>
+    <h1>Telegram Chat Statistics</h1>
+
+    <div id="loading">Loading statistics...</div>
+    <div id="content" class="hidden">
+
+        <!-- Summary Section -->
+        <section class="section" id="summarySection">
+            <h2>Overview</h2>
+            <div class="summary-grid" id="summaryGrid"></div>
+
+            <div class="highlight-box" id="peaksHighlight"></div>
+        </section>
+
+        <!-- Temporal Statistics -->
+        <section class="section">
+            <h2>Activity Over Time</h2>
+            <div class="chart-container">
+                <canvas id="dailyActivity"></canvas>
+            </div>
+            <div class="chart-container">
+                <canvas id="monthlyActivity"></canvas>
+            </div>
+            <div class="chart-row">
+                <div class="chart-container">
+                    <canvas id="activeHours"></canvas>
+                </div>
+                <div class="chart-container">
+                    <canvas id="activeDays"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <!-- User Statistics -->
+        <section class="section">
+            <h2>User Activity</h2>
+            <div class="chart-container">
+                <canvas id="userActivity"></canvas>
+            </div>
+            <div class="chart-container">
+                <h3>Top Users Details</h3>
+                <table class="stats-table" id="userTable"></table>
+            </div>
+        </section>
+
+        <!-- Content Statistics -->
+        <section class="section">
+            <h2>Content Analysis</h2>
+            <div class="chart-row">
+                <div class="chart-container">
+                    <canvas id="mediaTypes"></canvas>
+                </div>
+                <div class="chart-container">
+                    <canvas id="messageLengths"></canvas>
+                </div>
+            </div>
+            <div class="chart-container">
+                <h3>Top Emojis</h3>
+                <div id="emojiStats"></div>
+                <div class="emoji-grid" id="emojiGrid"></div>
+            </div>
+        </section>
+
+        <!-- Engagement Statistics -->
+        <section class="section">
+            <h2>Engagement</h2>
+            <div class="chart-row">
+                <div class="chart-container">
+                    <canvas id="replyStats"></canvas>
+                </div>
+                <div class="chart-container">
+                    <h3>Conversation Stats</h3>
+                    <div id="engagementStats"></div>
+                </div>
+            </div>
+        </section>
+
+    </div>
 
     <script>
-    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    // ============================================================================
+    // CONFIGURATION
+    // ============================================================================
 
-    fetch('stats_2023-7-8_19-17-44.json')
-        .then(response => response.json())
-        .then(stats => {
-            createLineChart('dailyActivity', stats.dailyActivity, 'Messages per Day', 'Day');
-            createBarChart('userActivity', stats.userActivity, 'Top 20 Users by Messages');
-            createLineChart('activeHours', stats.activeHours, 'Active Hours (UTC)', 'Hour');
-            createLineChart('activeDays', convertDays(stats.activeDays), 'Active Days', 'Day');
-        });
+    // Update this to match your stats file
+    const STATS_FILE = 'stats_2023-7-8_19-17-44.json';
 
+    // Day names for conversion
+    const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+    // Chart colors
+    const COLORS = {
+        primary: 'rgb(0, 136, 204)',
+        primaryLight: 'rgba(0, 136, 204, 0.2)',
+        secondary: 'rgb(255, 99, 132)',
+        success: 'rgb(75, 192, 192)',
+        warning: 'rgb(255, 205, 86)',
+        info: 'rgb(54, 162, 235)',
+        palette: [
+            'rgb(0, 136, 204)',
+            'rgb(255, 99, 132)',
+            'rgb(75, 192, 192)',
+            'rgb(255, 205, 86)',
+            'rgb(54, 162, 235)',
+            'rgb(153, 102, 255)',
+            'rgb(255, 159, 64)',
+            'rgb(199, 199, 199)'
+        ]
+    };
+
+    // ============================================================================
+    // UTILITY FUNCTIONS
+    // ============================================================================
+
+    /**
+     * Converts numeric day keys to day names
+     */
+    function convertDaysToNames(data) {
+        const converted = {};
+        for (let key in data) {
+            converted[DAY_NAMES[key]] = data[key];
+        }
+        return converted;
+    }
+
+    /**
+     * Formats large numbers with commas
+     */
+    function formatNumber(num) {
+        return num.toLocaleString();
+    }
+
+    /**
+     * Creates a summary card HTML
+     */
+    function createSummaryCard(value, label) {
+        return `
+            <div class="summary-card">
+                <div class="value">${formatNumber(value)}</div>
+                <div class="label">${label}</div>
+            </div>
+        `;
+    }
+
+    // ============================================================================
+    // CHART CREATION FUNCTIONS
+    // ============================================================================
+
+    /**
+     * Creates a line chart for time-series data
+     */
     function createLineChart(canvasId, data, label, xLabel) {
-        let ctx = document.getElementById(canvasId).getContext('2d');
-        let labels = Object.keys(data);
-        let dataValues = Object.values(data);
+        const ctx = document.getElementById(canvasId).getContext('2d');
+        const labels = Object.keys(data);
+        const values = Object.values(data);
+
         new Chart(ctx, {
             type: 'line',
             data: {
                 labels: labels,
                 datasets: [{
                     label: label,
-                    data: dataValues,
-                    fill: false,
-                    borderColor: 'rgb(75, 192, 192)',
+                    data: values,
+                    fill: true,
+                    borderColor: COLORS.primary,
+                    backgroundColor: COLORS.primaryLight,
                     tension: 0.1
                 }]
             },
@@ -56,52 +336,33 @@
                     title: {
                         display: true,
                         text: label,
-                        font: {
-                            size: 20  // Adjust as needed
-                        }
-                    },
-                    tooltip: {
-                        callbacks: {
-                            title: function(context) {
-                                return context[0].label;
-                            },
-                            label: function(context) {
-                                return context.dataset.label + ': ' + context.parsed.y;
-                            }
-                        }
+                        font: { size: 16 }
                     }
                 },
                 scales: {
-                    x: {
-                        title: {
-                            display: true,
-                            text: xLabel
-                        }
-                    },
-                    y: {
-                        title: {
-                            display: true,
-                            text: 'Messages'
-                        }
-                    }
+                    x: { title: { display: true, text: xLabel } },
+                    y: { title: { display: true, text: 'Messages' }, beginAtZero: true }
                 }
             }
         });
     }
-    
-    function createBarChart(canvasId, data, label) {
-        let ctx = document.getElementById(canvasId).getContext('2d');
-        let labels = Object.keys(data);
-        let dataValues = Object.values(data);
+
+    /**
+     * Creates a bar chart for categorical data
+     */
+    function createBarChart(canvasId, data, label, xLabel = 'Category') {
+        const ctx = document.getElementById(canvasId).getContext('2d');
+        const labels = Object.keys(data);
+        const values = Object.values(data);
+
         new Chart(ctx, {
             type: 'bar',
             data: {
                 labels: labels,
                 datasets: [{
                     label: label,
-                    data: dataValues,
-                    fill: false,
-                    backgroundColor: 'rgb(75, 192, 192)'
+                    data: values,
+                    backgroundColor: COLORS.primary
                 }]
             },
             options: {
@@ -110,46 +371,244 @@
                     title: {
                         display: true,
                         text: label,
-                        font: {
-                            size: 20  // Adjust as needed
-                        }
-                    },
-                    tooltip: {
-                        callbacks: {
-                            title: function(context) {
-                                return context[0].label;
-                            },
-                            label: function(context) {
-                                return context.dataset.label + ': ' + context.parsed.y;
-                            }
-                        }
+                        font: { size: 16 }
                     }
                 },
                 scales: {
-                    x: {
-                        title: {
-                            display: true,
-                            text: 'User'
-                        }
-                    },
-                    y: {
-                        title: {
-                            display: true,
-                            text: 'Messages'
-                        }
+                    x: { title: { display: true, text: xLabel } },
+                    y: { title: { display: true, text: 'Count' }, beginAtZero: true }
+                }
+            }
+        });
+    }
+
+    /**
+     * Creates a horizontal bar chart
+     */
+    function createHorizontalBarChart(canvasId, data, label) {
+        const ctx = document.getElementById(canvasId).getContext('2d');
+        const labels = Object.keys(data);
+        const values = Object.values(data);
+
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: label,
+                    data: values,
+                    backgroundColor: COLORS.palette
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: label,
+                        font: { size: 16 }
                     }
                 }
             }
         });
     }
 
-    function convertDays(data) {
-        let convertedData = {};
-        for (let key in data) {
-            convertedData[dayNames[key]] = data[key];
-        }
-        return convertedData;
+    /**
+     * Creates a doughnut chart for distribution data
+     */
+    function createDoughnutChart(canvasId, data, label) {
+        const ctx = document.getElementById(canvasId).getContext('2d');
+        const labels = Object.keys(data);
+        const values = Object.values(data);
+
+        new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: values,
+                    backgroundColor: COLORS.palette
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: label,
+                        font: { size: 16 }
+                    },
+                    legend: {
+                        position: 'right'
+                    }
+                }
+            }
+        });
     }
+
+    // ============================================================================
+    // SECTION RENDERERS
+    // ============================================================================
+
+    /**
+     * Renders the summary section with key metrics
+     */
+    function renderSummary(stats) {
+        const grid = document.getElementById('summaryGrid');
+        const summary = stats.summary;
+
+        grid.innerHTML = `
+            ${createSummaryCard(summary.totalMessages, 'Total Messages')}
+            ${createSummaryCard(summary.totalUsers, 'Total Users')}
+            ${createSummaryCard(summary.totalDays, 'Days of Activity')}
+            ${createSummaryCard(summary.averageMessagesPerDay, 'Avg Messages/Day')}
+            ${createSummaryCard(summary.averageMessagesPerUser, 'Avg Messages/User')}
+            ${createSummaryCard(stats.streaks.longestStreak, 'Longest Streak (days)')}
+        `;
+
+        // Render peaks highlight
+        const peaks = stats.peaks;
+        const peaksBox = document.getElementById('peaksHighlight');
+        peaksBox.innerHTML = `
+            <h3>Peak Activity</h3>
+            <p><strong>Busiest Day:</strong> ${peaks.peakDay.date} with ${formatNumber(peaks.peakDay.messages)} messages</p>
+            <p><strong>Peak Hour:</strong> ${peaks.peakHour.hour}:00 UTC with ${formatNumber(peaks.peakHour.messages)} messages</p>
+            <p><strong>Peak Month:</strong> ${peaks.peakMonth.month} with ${formatNumber(peaks.peakMonth.messages)} messages</p>
+            <p><strong>Activity Streak:</strong> ${stats.streaks.longestStreak} consecutive days (${stats.streaks.streakStart} to ${stats.streaks.streakEnd})</p>
+        `;
+    }
+
+    /**
+     * Renders the user details table
+     */
+    function renderUserTable(stats) {
+        const table = document.getElementById('userTable');
+        const users = stats.userActivityWithPercentage;
+        const timeline = stats.userTimeline;
+
+        let html = `
+            <tr>
+                <th>User</th>
+                <th>Messages</th>
+                <th>% of Total</th>
+                <th>First Seen</th>
+                <th>Last Seen</th>
+                <th>Active Days</th>
+            </tr>
+        `;
+
+        Object.entries(users).forEach(([user, data]) => {
+            const tl = timeline[user] || {};
+            html += `
+                <tr>
+                    <td>${user}</td>
+                    <td>${formatNumber(data.count)}</td>
+                    <td>${data.percentage}%</td>
+                    <td>${tl.firstSeen || '-'}</td>
+                    <td>${tl.lastSeen || '-'}</td>
+                    <td>${tl.activeDays || '-'}</td>
+                </tr>
+            `;
+        });
+
+        table.innerHTML = html;
+    }
+
+    /**
+     * Renders emoji statistics
+     */
+    function renderEmojiStats(stats) {
+        const emoji = stats.emojiStats;
+        const container = document.getElementById('emojiStats');
+        const grid = document.getElementById('emojiGrid');
+
+        container.innerHTML = `
+            <p><strong>Total Emojis Used:</strong> ${formatNumber(emoji.totalEmojis)}</p>
+            <p><strong>Unique Emojis:</strong> ${formatNumber(emoji.uniqueEmojis)}</p>
+            <p><strong>Messages with Emojis:</strong> ${formatNumber(emoji.messagesWithEmojis)}</p>
+        `;
+
+        let emojiHtml = '';
+        Object.entries(emoji.topEmojis).forEach(([emojiChar, count]) => {
+            emojiHtml += `
+                <div class="emoji-item">
+                    <span class="emoji">${emojiChar}</span>
+                    <span class="count">${formatNumber(count)}</span>
+                </div>
+            `;
+        });
+        grid.innerHTML = emojiHtml;
+    }
+
+    /**
+     * Renders engagement statistics
+     */
+    function renderEngagementStats(stats) {
+        const reply = stats.replyChains;
+        const container = document.getElementById('engagementStats');
+
+        container.innerHTML = `
+            <p><strong>Total Replies:</strong> ${formatNumber(reply.totalReplies)} (${reply.replyPercentage}% of messages)</p>
+            <p><strong>Total Forwards:</strong> ${formatNumber(reply.totalForwards)}</p>
+            <h4>Top Repliers:</h4>
+            <ul>
+                ${Object.entries(reply.topRepliers).map(([user, count]) =>
+                    `<li>${user}: ${formatNumber(count)} replies</li>`
+                ).join('')}
+            </ul>
+        `;
+
+        // Create reply stats chart
+        const replyData = {
+            'Original Messages': stats.summary.totalMessages - reply.totalReplies - reply.totalForwards,
+            'Replies': reply.totalReplies,
+            'Forwards': reply.totalForwards
+        };
+        createDoughnutChart('replyStats', replyData, 'Message Types');
+    }
+
+    // ============================================================================
+    // MAIN INITIALIZATION
+    // ============================================================================
+
+    fetch(STATS_FILE)
+        .then(response => {
+            if (!response.ok) throw new Error('Failed to load stats file');
+            return response.json();
+        })
+        .then(stats => {
+            // Hide loading, show content
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('content').classList.remove('hidden');
+
+            // Render summary section
+            renderSummary(stats);
+
+            // Render temporal charts
+            createLineChart('dailyActivity', stats.dailyActivity, 'Messages per Day', 'Date');
+            createLineChart('monthlyActivity', stats.monthlyActivity, 'Messages per Month', 'Month');
+            createLineChart('activeHours', stats.activeHours, 'Activity by Hour (UTC)', 'Hour');
+            createBarChart('activeDays', convertDaysToNames(stats.activeDays), 'Activity by Day of Week', 'Day');
+
+            // Render user charts
+            createHorizontalBarChart('userActivity', stats.userActivity, 'Top 20 Users by Messages');
+            renderUserTable(stats);
+
+            // Render content charts
+            createDoughnutChart('mediaTypes', stats.mediaTypes, 'Media Type Distribution');
+            createBarChart('messageLengths', stats.messageLengthStats.lengthDistribution, 'Message Length Distribution', 'Length Category');
+
+            // Render emoji and engagement stats
+            renderEmojiStats(stats);
+            renderEngagementStats(stats);
+        })
+        .catch(error => {
+            document.getElementById('loading').innerHTML = `
+                <p style="color: red;">Error loading statistics: ${error.message}</p>
+                <p>Make sure the stats file exists and the path is correct.</p>
+            `;
+        });
     </script>
 </body>
 </html>
